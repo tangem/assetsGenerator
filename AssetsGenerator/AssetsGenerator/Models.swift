@@ -38,6 +38,7 @@ public enum Blockchain: Codable {
     case dogecoin
     case bsc(testnet: Bool)
     case polygon(testnet: Bool)
+    case solana
     
     public var isTestnet: Bool {
         switch self {
@@ -55,12 +56,14 @@ public enum Blockchain: Codable {
             return testnet
         case .polygon(let testnet):
             return testnet
+        case .solana:
+            return false
         }
     }
     
     public var curve: EllipticCurve {
         switch self {
-        case .stellar, .cardano:
+        case .stellar, .cardano, .solana:
             return .ed25519
         case .xrp(let curve):
             return curve
@@ -86,6 +89,7 @@ public enum Blockchain: Codable {
         case .dogecoin: return "dogecoin"
         case .bsc: return "bsc"
         case .polygon: return "polygon"
+        case .solana: return "solana"
         }
     }
     
@@ -122,6 +126,7 @@ public enum Blockchain: Codable {
         case "dogecoin": self = .dogecoin
         case "bsc": self = .bsc(testnet: isTestnet)
         case "polygon", "matic": self = .polygon(testnet: isTestnet)
+        case "solana": self = .solana
         default: throw Errors.unsupported
         }
     }
@@ -138,8 +143,12 @@ public enum Blockchain: Codable {
     }
     
     static func fromType(_ typeValue: String) -> Blockchain {
-        switch typeValue.lowercased() {
+        switch typeValue {
         case "polygon": return .polygon(testnet: false)
+        case "SPL": return .solana
+        case "ERC20": return .ethereum(testnet: false)
+        case "BEP20": return .bsc(testnet: false)
+        case "BEP2": return .binance(testnet: false)
         default:
             fatalError("unsupported")
         }
@@ -164,3 +173,10 @@ struct TWToken: Codable {
     public let type: String
 }
 
+enum Assets: String {
+    case polygon
+    case solana
+    case binance
+    case smartchain //BSC
+    case ethereum
+}

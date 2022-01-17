@@ -7,9 +7,12 @@
 
 import Foundation
 
-let pathToAssets = "/Users/alexander.osokin/repos/github/assets/blockchains/polygon/assets"
-let jsonFileName = "info.json"
+//Select me!
+let assets: Assets = .solana
 
+let pathToAssets = "/Users/alexander.osokin/repos/github/assets/blockchains/\(assets.rawValue)/assets"
+let jsonFileName = "info.json"
+let resultJsonFileSuffix = "Tokens.json"
 let assetsFolders = try! FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: pathToAssets), includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
 
 let twTokens = assetsFolders.map { path -> TWToken in
@@ -26,4 +29,9 @@ encoder.outputFormatting = .prettyPrinted
 let jsonData = try! encoder.encode(tokens)
 let jsonString = String(data: jsonData, encoding: .utf8)!
 
-print(jsonString)
+print("File saved to:")
+let outputPath = "\(FileManager.default.currentDirectoryPath)/\(assets.rawValue)\(resultJsonFileSuffix)"
+print(outputPath)
+try! jsonString.write(toFile: outputPath, atomically: true, encoding: .utf8)
+
+//print(jsonString)
