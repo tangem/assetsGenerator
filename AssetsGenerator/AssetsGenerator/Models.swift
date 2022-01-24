@@ -7,158 +7,107 @@
 
 import Foundation
 
+struct NewToken: Codable, Hashable, Equatable {
+    public let name: String
+    public let symbol: String
+    public let contractAddress: String
+    public let decimalCount: Int
+    public let customIconUrl: String?
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(contractAddress.lowercased())
+    }
+    
+    public static func == (lhs: NewToken, rhs: NewToken) -> Bool {
+        lhs.hashValue == rhs.hashValue
+    }
+    
+    var jsonDescription: String {        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let jsonData = try! encoder.encode(self)
+        let jsonString = String(data: jsonData, encoding: .utf8)!
+        return jsonString
+    }
+    
+    init(from twToken: TWToken) {
+        name = twToken.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        symbol = twToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        contractAddress = twToken.id.trimmingCharacters(in: .whitespacesAndNewlines)
+        decimalCount = twToken.decimals
+        customIconUrl = nil
+    }
+    
+    init(from avToken: AVToken) {
+        name = avToken.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        symbol = avToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        contractAddress = avToken.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        decimalCount = avToken.decimals
+        customIconUrl = avToken.logoURI
+    }
+}
+
+extension Collection where Self: Encodable {
+    var jsonDescription: String {
+        if self.isEmpty {
+            return "[]"
+        }
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let jsonData = try! encoder.encode(self)
+        let jsonString = String(data: jsonData, encoding: .utf8)!
+        return jsonString
+    }
+}
+
 struct Token: Codable {
     public let name: String
     public let symbol: String
     public let contractAddress: String
     public let decimalCount: Int
-    public let blockchain: Blockchain
     
-    init(from twToken: TWToken) {
-        name = twToken.name
-        symbol = twToken.symbol
-        contractAddress = twToken.id
-        decimalCount = twToken.decimals
-        blockchain = Blockchain.fromType(twToken.type)
-    }
+//    init(from twToken: TWToken) {
+//        name = twToken.name
+//        symbol = twToken.symbol
+//        contractAddress = twToken.id
+//        decimalCount = twToken.decimals
+//        blockchain = Blockchain.fromType(twToken.type)
+//    }
 }
 
-public enum Blockchain: Codable {
-    case bitcoin(testnet: Bool)
-    case litecoin
+public enum Blockchain {
     case stellar(testnet: Bool)
     case ethereum(testnet: Bool)
     case rsk
-    case bitcoinCash(testnet: Bool)
     case binance(testnet: Bool)
     case cardano(shelley: Bool)
-    case xrp(curve: EllipticCurve)
-    case ducatus
-    case tezos(curve: EllipticCurve)
-    case dogecoin
     case bsc(testnet: Bool)
     case polygon(testnet: Bool)
     case solana
-    
-    public var isTestnet: Bool {
-        switch self {
-        case .bitcoin(let testnet):
-            return testnet
-        case .litecoin, .ducatus, .cardano, .xrp, .rsk, .tezos, .dogecoin:
-            return false
-        case .stellar(let testnet):
-            return testnet
-        case .ethereum(let testnet), .bsc(let testnet):
-            return testnet
-        case .bitcoinCash(let testnet):
-            return testnet
-        case .binance(let testnet):
-            return testnet
-        case .polygon(let testnet):
-            return testnet
-        case .solana:
-            return false
-        }
-    }
-    
-    public var curve: EllipticCurve {
-        switch self {
-        case .stellar, .cardano, .solana:
-            return .ed25519
-        case .xrp(let curve):
-            return curve
-        case .tezos(let curve):
-            return curve
-        default:
-            return .secp256k1
-        }
-    }
-    var codingKey: String {
-        switch self {
-        case .binance: return "binance"
-        case .bitcoin: return "bitcoin"
-        case .bitcoinCash: return "bitcoinCash"
-        case .cardano: return "cardano"
-        case .ducatus: return "ducatus"
-        case .ethereum: return "ethereum"
-        case .litecoin: return "litecoin"
-        case .rsk: return "rsk"
-        case .stellar: return "stellar"
-        case .tezos: return "tezos"
-        case .xrp: return "xrp"
-        case .dogecoin: return "dogecoin"
-        case .bsc: return "bsc"
-        case .polygon: return "polygon"
-        case .solana: return "solana"
-        }
-    }
-    
-    enum Keys: CodingKey {
-        case key
-        case testnet
-        case curve
-        case shelley
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: Keys.self)
-        let key = try container.decode(String.self, forKey: Keys.key)
-        let curveString = try container.decode(String.self, forKey: Keys.curve)
-        let isTestnet = try container.decode(Bool.self, forKey: Keys.testnet)
-        let shelley = try? container.decode(Bool.self, forKey: Keys.shelley)
-        
-        guard let curve = EllipticCurve(rawValue: curveString) else {
-            throw Errors.unsupported
-        }
-        
-        switch key {
-        case "bitcoin": self = .bitcoin(testnet: isTestnet)
-        case "stellar": self = .stellar(testnet: isTestnet)
-        case "ethereum": self = .ethereum(testnet: isTestnet)
-        case "litecoin": self = .litecoin
-        case "rsk": self = .rsk
-        case "bitcoinCash": self = .bitcoinCash(testnet: isTestnet)
-        case "binance": self = .binance(testnet: isTestnet)
-        case "cardano": self =  .cardano(shelley: shelley!)
-        case "xrp": self = .xrp(curve: curve)
-        case "ducatus": self = .ducatus
-        case "tezos": self = .tezos(curve: curve)
-        case "dogecoin": self = .dogecoin
-        case "bsc": self = .bsc(testnet: isTestnet)
-        case "polygon", "matic": self = .polygon(testnet: isTestnet)
-        case "solana": self = .solana
-        default: throw Errors.unsupported
-        }
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: Keys.self)
-        try container.encode(codingKey, forKey: Keys.key)
-        try container.encode(curve.rawValue, forKey: Keys.curve)
-        try container.encode(isTestnet, forKey: Keys.testnet)
-        
-        if case let .cardano(shelley) = self {
-            try container.encode(shelley, forKey: Keys.shelley)
-        }
-    }
+    case avalanche(testnet: Bool)
     
     static func fromType(_ typeValue: String) -> Blockchain {
         switch typeValue {
-        case "polygon": return .polygon(testnet: false)
+        case "POLYGON": return .polygon(testnet: false)
         case "SPL": return .solana
         case "ERC20": return .ethereum(testnet: false)
         case "BEP20": return .bsc(testnet: false)
         case "BEP2": return .binance(testnet: false)
+        case "AVALANCHE": return .avalanche(testnet: false)
         default:
             fatalError("unsupported")
         }
     }
-}
-
-public enum EllipticCurve: String, Codable {
-    case secp256k1
-    case ed25519
-    case secp256r1
+    
+    static func fromAvalancheChainID(_ chainId: String) -> Blockchain {
+        switch chainId {
+        case "43114": return .avalanche(testnet: false)
+        case "43113": return .avalanche(testnet: true)
+        default:
+            fatalError("unsupported")
+        }
+    }
 }
 
 enum Errors: Error {
@@ -173,10 +122,74 @@ struct TWToken: Codable {
     public let type: String
 }
 
-enum Assets: String {
+struct AVToken: Codable {
+    public let address: String
+    public let chainId: Int
+    public let name: String
+    public let symbol: String
+    public let decimals: Int
+    public let logoURI: String?
+}
+
+struct TokenList: Codable {
+    let tokens: [AVToken]
+}
+
+enum Assets: String, CaseIterable {
     case polygon
     case solana
+    case solanaTestnet
     case binance
-    case smartchain //BSC
+    case binanceTestnet
+    case bsc
+    case bscTestnet
     case ethereum
+    case ethereumTestnet
+    case avalanche
+    case avalancheTestnet
+    
+    var assetsPath: String {
+        switch self {
+        case .bsc:
+            return "smartchain"
+        case .avalanche:
+            return "avalanchec"
+        default:
+            return rawValue
+        }
+    }
+    
+    var type: String {
+        switch self {
+        case .avalanche: return "AVALANCHE"
+        case .binance: return "BEP2"
+        case .bsc: return "BEP20"
+        case .ethereum: return "ERC20"
+        case .polygon: return "POLYGON"
+        case .solana: return "SPL"
+        default:
+            fatalError()
+        }
+    }
+    
+    var avalancheChainId: Int {
+        switch self {
+        case .avalanche: return 43114
+        case .avalancheTestnet: return 43113
+        default:
+            fatalError()
+        }
+    }
+}
+
+extension String {
+    func contains(_ symbols: [String]) -> Bool {
+        for symbol in symbols {
+            if self.contains(symbol) {
+                return true
+            }
+        }
+        
+        return false
+    }
 }
