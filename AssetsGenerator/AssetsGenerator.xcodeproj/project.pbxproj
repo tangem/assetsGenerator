@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5DA5067527A0462F000A8901 /* TokenReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DA5067427A0462F000A8901 /* TokenReader.swift */; };
+		5DA5067727A0472A000A8901 /* CoinGecko.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DA5067627A0472A000A8901 /* CoinGecko.swift */; };
+		5DA5067927A04D74000A8901 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DA5067827A04D74000A8901 /* Extensions.swift */; };
 		5DEE580C2791CC6B00CCC4DD /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DEE580B2791CC6B00CCC4DD /* main.swift */; };
 		5DEE58132791CD0900CCC4DD /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DEE58122791CD0900CCC4DD /* Models.swift */; };
 /* End PBXBuildFile section */
@@ -24,6 +27,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		5DA5067427A0462F000A8901 /* TokenReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenReader.swift; sourceTree = "<group>"; };
+		5DA5067627A0472A000A8901 /* CoinGecko.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinGecko.swift; sourceTree = "<group>"; };
+		5DA5067827A04D74000A8901 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5DEE58082791CC6B00CCC4DD /* AssetsGenerator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AssetsGenerator; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DEE580B2791CC6B00CCC4DD /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		5DEE58122791CD0900CCC4DD /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -61,6 +67,9 @@
 			children = (
 				5DEE580B2791CC6B00CCC4DD /* main.swift */,
 				5DEE58122791CD0900CCC4DD /* Models.swift */,
+				5DA5067427A0462F000A8901 /* TokenReader.swift */,
+				5DA5067627A0472A000A8901 /* CoinGecko.swift */,
+				5DA5067827A04D74000A8901 /* Extensions.swift */,
 			);
 			path = AssetsGenerator;
 			sourceTree = "<group>";
@@ -123,8 +132,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5DA5067927A04D74000A8901 /* Extensions.swift in Sources */,
+				5DA5067727A0472A000A8901 /* CoinGecko.swift in Sources */,
 				5DEE580C2791CC6B00CCC4DD /* main.swift in Sources */,
 				5DEE58132791CD0900CCC4DD /* Models.swift in Sources */,
+				5DA5067527A0462F000A8901 /* TokenReader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

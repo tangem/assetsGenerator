@@ -7,106 +7,53 @@
 
 import Foundation
 
-struct NewToken: Codable, Hashable, Equatable {
+struct TangemToken: Codable, Hashable, Equatable {
     public let name: String
     public let symbol: String
     public let contractAddress: String
     public let decimalCount: Int
-    public let customIconUrl: String?
+    public var customIconUrl: String?
     
     public func hash(into hasher: inout Hasher) {
         hasher.combine(contractAddress.lowercased())
     }
     
-    public static func == (lhs: NewToken, rhs: NewToken) -> Bool {
+    public static func == (lhs: TangemToken, rhs: TangemToken) -> Bool {
         lhs.hashValue == rhs.hashValue
     }
     
     var jsonDescription: String {        
         let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
         let jsonData = try! encoder.encode(self)
         let jsonString = String(data: jsonData, encoding: .utf8)!
         return jsonString
     }
-    
-    init(from twToken: TWToken) {
+}
+
+extension TangemToken {
+    init(from twToken: TWToken, imageUrl: String) {
         name = twToken.name.trimmingCharacters(in: .whitespacesAndNewlines)
         symbol = twToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
         contractAddress = twToken.id.trimmingCharacters(in: .whitespacesAndNewlines)
         decimalCount = twToken.decimals
-        customIconUrl = nil
+        customIconUrl = imageUrl
     }
     
-    init(from avToken: AVToken) {
-        name = avToken.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        symbol = avToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
-        contractAddress = avToken.address.trimmingCharacters(in: .whitespacesAndNewlines)
-        decimalCount = avToken.decimals
-        customIconUrl = avToken.logoURI
-    }
-}
-
-extension Collection where Self: Encodable {
-    var jsonDescription: String {
-        if self.isEmpty {
-            return "[]"
-        }
-        
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        let jsonData = try! encoder.encode(self)
-        let jsonString = String(data: jsonData, encoding: .utf8)!
-        return jsonString
-    }
-}
-
-struct Token: Codable {
-    public let name: String
-    public let symbol: String
-    public let contractAddress: String
-    public let decimalCount: Int
-    
-//    init(from twToken: TWToken) {
-//        name = twToken.name
-//        symbol = twToken.symbol
-//        contractAddress = twToken.id
-//        decimalCount = twToken.decimals
-//        blockchain = Blockchain.fromType(twToken.type)
-//    }
-}
-
-public enum Blockchain {
-    case stellar(testnet: Bool)
-    case ethereum(testnet: Bool)
-    case rsk
-    case binance(testnet: Bool)
-    case cardano(shelley: Bool)
-    case bsc(testnet: Bool)
-    case polygon(testnet: Bool)
-    case solana
-    case avalanche(testnet: Bool)
-    
-    static func fromType(_ typeValue: String) -> Blockchain {
-        switch typeValue {
-        case "POLYGON": return .polygon(testnet: false)
-        case "SPL": return .solana
-        case "ERC20": return .ethereum(testnet: false)
-        case "BEP20": return .bsc(testnet: false)
-        case "BEP2": return .binance(testnet: false)
-        case "AVALANCHE": return .avalanche(testnet: false)
-        default:
-            fatalError("unsupported")
-        }
+    init(from token: AVToken) {
+        name = token.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        symbol = token.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        contractAddress = token.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        decimalCount = token.decimals
+        customIconUrl = token.logoURI
     }
     
-    static func fromAvalancheChainID(_ chainId: String) -> Blockchain {
-        switch chainId {
-        case "43114": return .avalanche(testnet: false)
-        case "43113": return .avalanche(testnet: true)
-        default:
-            fatalError("unsupported")
-        }
+    init(from token: GenericToken) {
+        name = token.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        symbol = token.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        contractAddress = token.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        decimalCount = token.decimals
+        customIconUrl = token.logoURI
     }
 }
 
@@ -135,7 +82,7 @@ struct TokenList: Codable {
     let tokens: [AVToken]
 }
 
-enum Assets: String, CaseIterable {
+enum Asset: String, CaseIterable {
     case polygon
     case solana
     case solanaTestnet
@@ -147,6 +94,39 @@ enum Assets: String, CaseIterable {
     case ethereumTestnet
     case avalanche
     case avalancheTestnet
+    
+    var isTestnet: Bool {
+        switch self {
+        case .solanaTestnet, .binanceTestnet, .bscTestnet, .ethereumTestnet, .avalancheTestnet:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var fileName: String { "\(rawValue).json" }
+    
+    var legacyFilename: String? {
+        switch self {
+        case .binance: return "binanceTokens.json"
+        case .binanceTestnet: return "binanceTokens_testnet.json"
+        case .bsc: return "binanceSmartChainTokens.json"
+        case .bscTestnet: return "binanceSmartChainTokens_testnet.json"
+        case .ethereum: return "ethereumTokens.json"
+        case .ethereumTestnet: return "ethereumTokens_testnet.json"
+        default:
+            return nil
+        }
+    }
+    
+    var fixedDecimals: Int? {
+        switch self {
+        case .binance:
+            return 8
+        default:
+            return nil
+        }
+    }
     
     var assetsPath: String {
         switch self {
@@ -171,25 +151,103 @@ enum Assets: String, CaseIterable {
             fatalError()
         }
     }
-    
-    var avalancheChainId: Int {
+
+    var chainId: Int? {
         switch self {
         case .avalanche: return 43114
         case .avalancheTestnet: return 43113
+        case .bsc: return 56
+        case .ethereum: return 1
+        case .polygon: return 137
+        case .solana: return 101
+        default:
+          return nil
+        }
+    }
+    
+    var cgPlatform: String {
+        switch self {
+        case .avalanche: return "avalanche"
+        case .binance: return "binancecoin"
+        case .bsc: return "binance-smart-chain"
+        case .ethereum: return "ethereum"
+        case .polygon: return "polygon-pos"
+        case .solana: return "solana"
         default:
             fatalError()
         }
     }
+    
+    static var productionCases: [Asset] { Asset.allCases.filter { !$0.isTestnet } }
+    
+    func readTokens() throws-> [TangemToken] {
+        let reader = TokenReader()
+        
+        switch self {
+        case .ethereum, .bsc:
+            let twTokens = Set(reader.readTwAssets(asset: self))
+            let plasmaTokens = Set(try reader.readPlasmaList(asset: self))
+            
+            let intersection = twTokens.intersection(plasmaTokens)
+            for token in intersection {
+                let twToken = twTokens.first(where: {$0.contractAddress == token.contractAddress})!
+                let ptoken = plasmaTokens.first(where: {$0.contractAddress == token.contractAddress})!
+                if twToken.name != ptoken.name || twToken.symbol != ptoken.symbol {
+                    print("names: \(twToken.name), \(ptoken.name); symbols: \(twToken.symbol), \(ptoken.symbol)")
+                }
+            }
+            
+            return Array(twTokens.union(plasmaTokens))
+        case .avalanche, .avalancheTestnet:
+            let twTokens = reader.readTwAssets(asset: self)
+            let avaxTokens = try reader.readAvalancheLists(asset: self)
+            return Array(Set(twTokens + avaxTokens))
+        case .solana:
+            let twTokens = reader.readTwAssets(asset: self)
+            let solTokens = try reader.readSolanaList(asset: self)
+            return Array(Set(twTokens + solTokens))
+        case .polygon:
+            let polygonTokens = try reader.readPolygonList(asset: self)
+            let twTokens = reader.readTwAssets(asset: self)
+            let plasmaTokens = try reader.readPlasmaList(asset: self)
+            
+            return Array(Set(polygonTokens + twTokens + plasmaTokens))
+        default:
+            return reader.readTwAssets(asset: self)
+        }
+    }
 }
 
-extension String {
-    func contains(_ symbols: [String]) -> Bool {
-        for symbol in symbols {
-            if self.contains(symbol) {
-                return true
-            }
-        }
-        
-        return false
+//coingecko
+struct CGToken: Codable, Hashable {
+    let id: String
+    let symbol: String
+    let name: String
+    var platforms: [String:String?]
+    var usdPrice: Decimal?
+    
+    var jsonDescription: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        let jsonData = try! encoder.encode(self)
+        let jsonString = String(data: jsonData, encoding: .utf8)!
+        return jsonString
     }
+}
+
+struct CGPrice: Codable {
+    let usd: Decimal?
+}
+
+struct GenericToken: Codable {
+    public let address: String
+    public let chainId: Int
+    public let name: String
+    public let symbol: String
+    public let decimals: Int
+    public let logoURI: String?
+}
+
+struct GenericTokenList: Codable {
+    public let tokens: [GenericToken]
 }
