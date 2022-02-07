@@ -88,7 +88,7 @@ func run(asset: Asset) async throws -> (Int, Int, Int) {
             
             if let assetToken = assetTokens.first(where: { $0.contractAddress.lowercased() == contract.lowercased() })  {
                 return TangemToken(name: cgToken.name.trimmingCharacters(in: .whitespacesAndNewlines),
-                                   symbol: cgToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines),
+                                   symbol: cgToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
                                    contractAddress: contract.trimmingCharacters(in: .whitespacesAndNewlines),
                                    decimalCount: assetToken.decimalCount,
                                    customIconUrl: assetToken.customIconUrl)
@@ -96,7 +96,7 @@ func run(asset: Asset) async throws -> (Int, Int, Int) {
             
             if let fixedDecimals = asset.fixedDecimals ?? manualDecimals {
                 return TangemToken(name: cgToken.name.trimmingCharacters(in: .whitespacesAndNewlines),
-                                   symbol: cgToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines),
+                                   symbol: cgToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
                                    contractAddress: contract.trimmingCharacters(in: .whitespacesAndNewlines),
                                    decimalCount: fixedDecimals,
                                    customIconUrl: nil)
@@ -153,7 +153,7 @@ func mainTask() {
             var totalMissingCount = 0
             var totalConflicted = 0
 
-            for asset in [Asset.ethereum] {
+            for asset in Asset.productionCases {
                 let result = try await run(asset: asset)
                 print("\(asset.rawValue) tokens: \(result.0). Missing \(result.1). Conflicted \(result.2)")
                 totalTokensCount += result.0
