@@ -7,7 +7,7 @@
 
 import Foundation
 
-var verbose = false
+var verbose = true
 
 func log(_ string: String) {
     if verbose {
@@ -17,22 +17,22 @@ func log(_ string: String) {
 ///Users/alexander.osokin/Library/Developer/Xcode/DerivedData/AssetsGenerator-cpdytibrrxrpafddymdcsbldpqtp/Build/Products/Debug
 
 func readExistingAssets(asset: Asset) -> [TangemToken] {
-    guard let fileName = asset.legacyFilename else { return []  }
+    let fileName = asset.fileName
     
     let pathToExistingAssets = "/Users/alexander.osokin/repos/tangem/tangem-ios/Tangem/Resources/"
     let existingAssetsURL = URL(fileURLWithPath: pathToExistingAssets)
     let existingAssetFileURL = existingAssetsURL.appendingPathComponent(fileName)
     let existingTokens = (try? JSONDecoder().decode([TangemToken].self, from: Data(contentsOf: existingAssetFileURL))) ?? []
     
-    let existingTokensWithImages = existingTokens.map { token -> TangemToken in
-        var mutableToken = token
-        let contract = token.contractAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        let imageUrl = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/\(asset.assetsPath)/assets/\(contract)/logo.png"
-        mutableToken.customIconUrl = imageUrl
-        return mutableToken
-    }
+//    let existingTokensWithImages = existingTokens.map { token -> TangemToken in
+//        var mutableToken = token
+//        let contract = token.contractAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+//        let imageUrl = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/\(asset.twAssetsPath)/assets/\(contract)/logo.png"
+//        mutableToken.customIconUrl = imageUrl
+//        return mutableToken
+//    }
     
-    return existingTokensWithImages
+    return existingTokens
 }
 
 func run(asset: Asset) async throws -> (Int, Int, Int) {
@@ -153,7 +153,7 @@ func mainTask() {
             var totalMissingCount = 0
             var totalConflicted = 0
 
-            for asset in Asset.productionCases {
+            for asset in Asset.testnetCases {
                 let result = try await run(asset: asset)
                 print("\(asset.rawValue) tokens: \(result.0). Missing \(result.1). Conflicted \(result.2)")
                 totalTokensCount += result.0

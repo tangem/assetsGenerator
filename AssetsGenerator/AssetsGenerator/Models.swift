@@ -84,6 +84,7 @@ struct TokenList: Codable {
 
 enum Asset: String, CaseIterable {
     case polygon
+    case polygonTestnet
     case solana
     case solanaTestnet
     case binance
@@ -94,10 +95,12 @@ enum Asset: String, CaseIterable {
     case ethereumTestnet
     case avalanche
     case avalancheTestnet
+    case fantom
+    case fantomTestnet
     
     var isTestnet: Bool {
         switch self {
-        case .solanaTestnet, .binanceTestnet, .bscTestnet, .ethereumTestnet, .avalancheTestnet:
+        case .solanaTestnet, .binanceTestnet, .bscTestnet, .ethereumTestnet, .avalancheTestnet, .fantomTestnet, .polygonTestnet:
             return true
         default:
             return false
@@ -128,17 +131,46 @@ enum Asset: String, CaseIterable {
         }
     }
     
-    var assetsPath: String {
+    //trustwallet
+    var twAssetsPath: String? {
         switch self {
         case .bsc:
             return "smartchain"
         case .avalanche:
             return "avalanchec"
-        default:
+        case .polygon, .solana, .binance, .ethereum, .fantom:
             return rawValue
+        default:
+            return nil
         }
     }
     
+    //sushi
+    var sushiListName: String? {
+        switch self {
+        case .polygon:
+            return "matic"
+        case .polygonTestnet:
+            return "matic-testnet"
+        case .bsc:
+            return "bsc"
+        case .bscTestnet:
+            return "bsc-testnet"
+        case .ethereum:
+            return "mainnet"
+        case .ethereumTestnet:
+            return "rinkeby"
+        case .avalanche:
+            return "avalanche"
+        case .fantom:
+            return "fantom"
+        case .fantomTestnet:
+            return "fantom-testnet"
+        default:
+            return nil
+        }
+    }
+    //trustwallet
     var type: String {
         switch self {
         case .avalanche: return "AVALANCHE"
@@ -147,6 +179,7 @@ enum Asset: String, CaseIterable {
         case .ethereum: return "ERC20"
         case .polygon: return "POLYGON"
         case .solana: return "SPL"
+        case .fantom: return "FANTOM"
         default:
             fatalError()
         }
@@ -159,7 +192,10 @@ enum Asset: String, CaseIterable {
         case .bsc: return 56
         case .ethereum: return 1
         case .polygon: return 137
+        case .polygonTestnet: return 80001
         case .solana: return 101
+        case .fantom: return 250
+        case .fantomTestnet: return 4002
         default:
           return nil
         }
@@ -173,6 +209,7 @@ enum Asset: String, CaseIterable {
         case .ethereum: return "ethereum"
         case .polygon: return "polygon-pos"
         case .solana: return "solana"
+        case .fantom: return "fantom"
         default:
             fatalError()
         }
@@ -180,41 +217,29 @@ enum Asset: String, CaseIterable {
     
     static var productionCases: [Asset] { Asset.allCases.filter { !$0.isTestnet } }
     
+    static var testnetCases: [Asset] { Asset.allCases.filter { $0.isTestnet } }
+    
     func readTokens() throws-> [TangemToken] {
         let reader = TokenReader()
         
+        var tokens: [TangemToken] = []
+        
+        tokens.append(contentsOf: try reader.readTwAssets(asset: self))
+        tokens.append(contentsOf: try reader.readSushiList(asset: self))
+        tokens.append(contentsOf: try reader.readPlasmaList(asset: self))
+        
         switch self {
-        case .ethereum, .bsc:
-            let twTokens = Set(reader.readTwAssets(asset: self))
-            let plasmaTokens = Set(try reader.readPlasmaList(asset: self))
-            
-            let intersection = twTokens.intersection(plasmaTokens)
-            for token in intersection {
-                let twToken = twTokens.first(where: {$0.contractAddress == token.contractAddress})!
-                let ptoken = plasmaTokens.first(where: {$0.contractAddress == token.contractAddress})!
-                if twToken.name != ptoken.name || twToken.symbol != ptoken.symbol {
-                    print("names: \(twToken.name), \(ptoken.name); symbols: \(twToken.symbol), \(ptoken.symbol)")
-                }
-            }
-            
-            return Array(twTokens.union(plasmaTokens))
         case .avalanche, .avalancheTestnet:
-            let twTokens = reader.readTwAssets(asset: self)
-            let avaxTokens = try reader.readAvalancheLists(asset: self)
-            return Array(Set(twTokens + avaxTokens))
+            tokens.append(contentsOf: try reader.readAvalancheLists(asset: self))
         case .solana:
-            let twTokens = reader.readTwAssets(asset: self)
-            let solTokens = try reader.readSolanaList(asset: self)
-            return Array(Set(twTokens + solTokens))
-        case .polygon:
-            let polygonTokens = try reader.readPolygonList(asset: self)
-            let twTokens = reader.readTwAssets(asset: self)
-            let plasmaTokens = try reader.readPlasmaList(asset: self)
-            
-            return Array(Set(polygonTokens + twTokens + plasmaTokens))
+            tokens.append(contentsOf: try reader.readSolanaList(asset: self))
+        case .polygon, .polygonTestnet:
+            tokens.append(contentsOf: try reader.readPolygonList(asset: self))
         default:
-            return reader.readTwAssets(asset: self)
+            break
         }
+        
+        return Array(Set(tokens))
     }
 }
 

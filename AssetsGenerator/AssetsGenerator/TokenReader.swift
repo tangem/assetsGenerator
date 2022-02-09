@@ -8,6 +8,7 @@
 import Foundation
 
 struct TokenReader {
+    //https://github.com/pangolindex/tokenlists
     func readAvalancheLists(asset: Asset) throws -> [TangemToken] {
         guard asset == .avalanche || asset == .avalancheTestnet else {
             return []
@@ -35,19 +36,22 @@ struct TokenReader {
         return Array(mergedTokens)
     }
     
-    func readTwAssets(asset: Asset) -> [TangemToken] {
+    //https://github.com/trustwallet/assets
+    func readTwAssets(asset: Asset) throws -> [TangemToken] {
+        guard let twAssetsPath = asset.twAssetsPath else { return [] }
+        
         //Constants
-        let pathToAssets = "/Users/alexander.osokin/repos/github/assets/blockchains/\(asset.assetsPath)/assets"
+        let pathToAssets = "/Users/alexander.osokin/repos/github/assets/blockchains/\(twAssetsPath)/assets"
         let jsonFileName = "info.json"
        
         //read tw assets
         let assetsURL = URL(fileURLWithPath: pathToAssets)
-        let assetsFolders = try! FileManager.default.contentsOfDirectory(at: assetsURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        let assetsFolders = try FileManager.default.contentsOfDirectory(at: assetsURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
         
-        let twTokens = assetsFolders.map { path -> TWToken in
+        let twTokens = try assetsFolders.map { path -> TWToken in
             let jsonPath = path.appendingPathComponent(jsonFileName)
-            let fileContents = try! Data(contentsOf: jsonPath)
-            let twToken = try! JSONDecoder().decode(TWToken.self, from: fileContents)
+            let fileContents = try Data(contentsOf: jsonPath)
+            let twToken = try JSONDecoder().decode(TWToken.self, from: fileContents)
             return twToken
         }
         
@@ -79,20 +83,22 @@ struct TokenReader {
             }
             .map { twToken -> TangemToken in
                 let contract = twToken.id.trimmingCharacters(in: .whitespacesAndNewlines)
-                let imageUrl = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/\(asset.assetsPath)/assets/\(contract)/logo.png"
+                let imageUrl = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/\(twAssetsPath)/assets/\(contract)/logo.png"
                 return TangemToken(from: twToken, imageUrl: imageUrl)
             }
        return readTokens
     }
     
+    //https://github.com/maticnetwork/polygon-token-list
     func readPolygonList(asset: Asset) throws -> [TangemToken] {
-        guard asset == .polygon else { return [] }
-        let fileURL = URL(fileURLWithPath: "/Users/alexander.osokin/repos/github/polygon-token-list/src/tokens/default.json")
+        guard asset == .polygon || asset == .polygonTestnet  else { return [] }
+        let fileURL = URL(fileURLWithPath: "/Users/alexander.osokin/repos/github/polygon-token-list/src/tokens/\(asset.isTestnet ? "testnetTokens" : "default").json")
         let polyTokens = try JSONDecoder().decode([GenericToken].self, from: Data(contentsOf: fileURL))
         
         return polyTokens.filter({ $0.chainId == asset.chainId }).map { TangemToken(from: $0 )}
     }
     
+    //https://github.com/plasmadlt/plasma-finance-token-list
     func readPlasmaList(asset: Asset) throws -> [TangemToken] {
         let fileURL = URL(fileURLWithPath: "/Users/alexander.osokin/repos/github/plasma-finance-token-list/plasma-finance-token-list.json")
         let list = try JSONDecoder().decode(GenericTokenList.self, from: Data(contentsOf: fileURL))
@@ -100,11 +106,22 @@ struct TokenReader {
         return list.tokens.filter({ $0.chainId == asset.chainId }).map { TangemToken(from: $0 )}
     }
     
+    //https://github.com/solana-labs/token-list
     func readSolanaList(asset: Asset) throws -> [TangemToken] {
         let fileURL = URL(fileURLWithPath: "/Users/alexander.osokin/repos/github/token-list/src/tokens/solana.tokenlist.json")
         let list = try JSONDecoder().decode(GenericTokenList.self, from: Data(contentsOf: fileURL))
         
         return list.tokens.filter({ $0.chainId == asset.chainId }).map { TangemToken(from: $0 )}
+    }
+    
+    //https://github.com/sushiswap/list
+    func readSushiList(asset: Asset) throws -> [TangemToken] {
+        guard let listName = asset.sushiListName else { return [] }
+        
+        let fileURL = URL(fileURLWithPath: "/Users/alexander.osokin/repos/github/list/packages/default-token-list/tokens/\(listName).json")
+        let tokens = try JSONDecoder().decode([GenericToken].self, from: Data(contentsOf: fileURL))
+        
+        return tokens.filter({ $0.chainId == asset.chainId }).map { TangemToken(from: $0 )}
     }
 }
 
