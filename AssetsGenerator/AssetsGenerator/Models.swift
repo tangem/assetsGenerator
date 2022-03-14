@@ -40,6 +40,14 @@ extension TangemToken {
         customIconUrl = imageUrl
     }
     
+    init(from rToken: RemoteToken, contract: RemoteToken.Contract) {
+        name = rToken.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        symbol = rToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        contractAddress = contract.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        decimalCount = contract.decimalCount
+        customIconUrl = "https://s3.eu-central-1.amazonaws.com/tangem.api/coins/large/\(rToken.id).png"
+    }
+    
     init(from token: AVToken) {
         name = token.name.trimmingCharacters(in: .whitespacesAndNewlines)
         symbol = token.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -215,31 +223,46 @@ enum Asset: String, CaseIterable {
         }
     }
     
+    var tngNetworkId: RemoteToken.NetworkId? {
+        switch self {
+        case .avalanche: return .avalanche
+        case .binance: return .binance
+        case .bsc: return .bsc
+        case .ethereum: return .ethereum
+        case .polygon: return .polygon
+        case .solana: return .solana
+        case .fantom: return .fantom
+        default:
+           return nil
+        }
+    }
+    
     static var productionCases: [Asset] { Asset.allCases.filter { !$0.isTestnet } }
     
     static var testnetCases: [Asset] { Asset.allCases.filter { $0.isTestnet } }
     
-    func readTokens() throws-> [TangemToken] {
-        let reader = TokenReader()
-        
-        var tokens: [TangemToken] = []
-        
-        tokens.append(contentsOf: try reader.readTwAssets(asset: self))
-        tokens.append(contentsOf: try reader.readSushiList(asset: self))
-        tokens.append(contentsOf: try reader.readPlasmaList(asset: self))
-        
-        switch self {
-        case .avalanche, .avalancheTestnet:
-            tokens.append(contentsOf: try reader.readAvalancheLists(asset: self))
-        case .solana:
-            tokens.append(contentsOf: try reader.readSolanaList(asset: self))
-        case .polygon, .polygonTestnet:
-            tokens.append(contentsOf: try reader.readPolygonList(asset: self))
-        default:
-            break
-        }
-        
-        return Array(Set(tokens))
+    func readTokens() async throws -> [TangemToken] {
+        return try await TokenReader().loadTangem(asset: self)
+//        let reader = TokenReader()
+//
+//        var tokens: [TangemToken] = []
+//
+//        tokens.append(contentsOf: try reader.readTwAssets(asset: self))
+//        tokens.append(contentsOf: try reader.readSushiList(asset: self))
+//        tokens.append(contentsOf: try reader.readPlasmaList(asset: self))
+//
+//        switch self {
+//        case .avalanche, .avalancheTestnet:
+//            tokens.append(contentsOf: try reader.readAvalancheLists(asset: self))
+//        case .solana:
+//            tokens.append(contentsOf: try reader.readSolanaList(asset: self))
+//        case .polygon, .polygonTestnet:
+//            tokens.append(contentsOf: try reader.readPolygonList(asset: self))
+//        default:
+//            break
+//        }
+//
+//        return Array(Set(tokens))
     }
 }
 
@@ -275,4 +298,33 @@ struct GenericToken: Codable {
 
 struct GenericTokenList: Codable {
     public let tokens: [GenericToken]
+}
+
+
+//tangem backend
+struct TangemList: Codable {
+    let tokens: [RemoteToken]
+}
+
+struct RemoteToken: Codable {
+    public let id: String
+    public let name: String
+    public let symbol: String
+    public let contracts: [Contract]?
+    
+    struct Contract: Codable {
+        public let networkId: NetworkId
+        public var address: String
+        public let decimalCount: Int
+    }
+    
+    enum NetworkId: String, Codable {
+        case polygon = "polygon-pos"
+        case solana
+        case binance = "binancecoin"
+        case bsc = "binance-smart-chain"
+        case ethereum
+        case avalanche
+        case fantom
+    }
 }

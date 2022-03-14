@@ -123,5 +123,30 @@ struct TokenReader {
         
         return tokens.filter({ $0.chainId == asset.chainId }).map { TangemToken(from: $0 )}
     }
+    
+    //https://api.tangem-tech.com/coins/tokens
+    func loadTangem(asset: Asset) async throws -> [TangemToken] {
+        guard let networkId = asset.tngNetworkId else { return [] }
+        
+        let url = URL(string: "https://api.tangem-tech.com/coins/tokens")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let list = try JSONDecoder().decode(TangemList.self, from: data)
+        
+        let filtered = list.tokens.compactMap { remoteToken -> TangemToken? in
+            if var contract = remoteToken.contracts?.first(where: {$0.networkId == networkId }) {
+                if asset == .polygon {
+                    if contract.address == "0x9fb83c0635de2e815fd1c21b3a292277540c2e8d" { //fix polygon busd
+                        contract.address = "0xdab529f40e671a1d4bf91361c21bf9f0c9712ab7"
+                    }
+                }
+                
+                return TangemToken(from: remoteToken, contract: contract)
+            }
+            
+            return nil
+        }
+        
+        return filtered
+    }
 }
 
